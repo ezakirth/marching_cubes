@@ -1,0 +1,32 @@
+{
+  "name": "marching_cubes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "dependencies": {
+    "normalize.css": "^8.0.1",
+    "simplex-noise": "^2.4.0",
+    "twgl.js": "^4.16.3"
+  },
+  "devDependencies": {
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^5.1.2",
+    "css-loader": "^3.6.0",
+    "file-loader": "^6.2.0",
+    "glsl-shader-loader": "^0.1.6",
+    "html-webpack-plugin": "^3.2.0",
+    "image-webpack-loader": "^5.1.0",
+    "node-sass": "^4.14.1",
+    "raw-loader": "^4.0.2",
+    "sass-loader": "^7.3.1",
+    "style-loader": "^0.23.1",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
