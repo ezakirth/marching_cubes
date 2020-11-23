@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/main.js",
   "dependencies": {
+    "gl-matrix": "^3.3.0",
     "normalize.css": "^8.0.1",
     "simplex-noise": "^2.4.0",
     "twgl.js": "^4.16.3"

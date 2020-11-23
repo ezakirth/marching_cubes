@@ -1,5 +1,11 @@
 import SimplexNoise from "simplex-noise";
-import { triangulation, cornerIndexAFromEdge, cornerIndexBFromEdge, CornerTable, EdgeIndexes } from "./CubeData.js";
+import {
+  triangulation,
+  cornerIndexAFromEdge,
+  cornerIndexBFromEdge,
+  CornerTable,
+  EdgeIndexes,
+} from "./CubeData.js";
 import { v3 } from "twgl.js";
 
 const simplex = new SimplexNoise("seed");
@@ -16,7 +22,7 @@ export default class Chunk {
     this.initData();
 
     this.interpolate = true;
-    this.indexed = true;
+    this.indexed = false;
   }
 
   initData() {
@@ -33,13 +39,10 @@ export default class Chunk {
       for (let y = 0; y < this.height + 1; y++) {
         this.data[x][y] = [];
         for (let z = 0; z < this.width + 1; z++) {
-          let v = Math.pow(x - cx, 2) + Math.pow(y - cy, 2) + Math.pow(z - cz, 2);
+          let v =
+            Math.pow(x - cx, 2) + Math.pow(y - cy, 2) + Math.pow(z - cz, 2);
 
-          if (v < r * r) {
-            this.data[x][y][z] = 1 - Math.sqrt(v) / r;
-          } else {
-            this.data[x][y][z] = 0;
-          }
+          this.data[x][y][z] = 1 - Math.sqrt(v) / r;
 
           if (v < r * r) {
             //   this.data[x][y][z] = simplex.noise3D(x / (this.width / 4), y / (this.height / 4), z / (this.width / 4));
@@ -47,13 +50,20 @@ export default class Chunk {
             this.data[x][y][z] = 0;
           }
 
-          if (x > this.width - 1 || x < 1 || y > this.height - 1 || y < 1 || z > this.width - 1 || z < 1) {
+          if (
+            x > this.width - 1 ||
+            x < 1 ||
+            y > this.height - 1 ||
+            y < 1 ||
+            z > this.width - 1 ||
+            z < 1
+          ) {
             this.data[x][y][z] = 1;
           }
         }
       }
     }
-    console.log(`data creation time:  ${new Date().getTime() - then} ms`);
+    //  console.log(`data creation time:  ${new Date().getTime() - then} ms`);
   }
 
   resetMesh() {
@@ -77,7 +87,7 @@ export default class Chunk {
 
     //draw mesh
 
-    console.log(`mesh creation time:  ${new Date().getTime() - then} ms`);
+    // console.log(`mesh creation time:  ${new Date().getTime() - then} ms`);
 
     if (this.indexed) {
       this.calculateIndexedFaceNormals();
@@ -121,7 +131,10 @@ export default class Chunk {
       n++;
 
       if (n % 3 === 0) {
-        let p = v3.cross(v3.subtract(vertex[1], vertex[0]), v3.subtract(vertex[2], vertex[0]));
+        let p = v3.cross(
+          v3.subtract(vertex[1], vertex[0]),
+          v3.subtract(vertex[2], vertex[0])
+        );
 
         this.normals[fx] += p[0];
         this.normals[fy] += p[1];
@@ -144,14 +157,17 @@ export default class Chunk {
       let y = i + 1;
       let z = i + 2;
 
-      const lenSq = this.normals[x] * this.normals[x] + this.normals[y] * this.normals[y] + this.normals[z] * this.normals[z];
+      const lenSq =
+        this.normals[x] * this.normals[x] +
+        this.normals[y] * this.normals[y] +
+        this.normals[z] * this.normals[z];
       const len = Math.sqrt(lenSq);
       this.normals[x] = this.normals[x] / len;
       this.normals[y] = this.normals[y] / len;
       this.normals[z] = this.normals[z] / len;
     }
 
-    console.log(`indexed face normal calculation time:  ${new Date().getTime() - then} ms`);
+    //  console.log(      `indexed face normal calculation time:  ${new Date().getTime() - then} ms`  );
   }
 
   calculateFaceNormals() {
@@ -168,7 +184,10 @@ export default class Chunk {
 
       n++;
       if (n % 3 === 0) {
-        let p = v3.cross(v3.subtract(vertex[1], vertex[0]), v3.subtract(vertex[2], vertex[0]));
+        let p = v3.cross(
+          v3.subtract(vertex[1], vertex[0]),
+          v3.subtract(vertex[2], vertex[0])
+        );
 
         this.normals.push(p[0], p[1], p[2]);
         this.normals.push(p[0], p[1], p[2]);
@@ -178,7 +197,7 @@ export default class Chunk {
       }
     }
 
-    console.log(`face normal calculation time:  ${new Date().getTime() - then} ms`);
+    //  console.log(      `face normal calculation time:  ${new Date().getTime() - then} ms`    );
   }
 
   marchCube(x, y, z) {
@@ -205,8 +224,10 @@ export default class Chunk {
 
       if (this.interpolate) {
         // Get the terrain values at either end of our current edge from the cube array created above.
-        let vert1Sample = cubeCorners[cornerIndexAFromEdge[triangulation[cubeIndex][i]]];
-        let vert2Sample = cubeCorners[cornerIndexBFromEdge[triangulation[cubeIndex][i]]];
+        let vert1Sample =
+          cubeCorners[cornerIndexAFromEdge[triangulation[cubeIndex][i]]];
+        let vert2Sample =
+          cubeCorners[cornerIndexBFromEdge[triangulation[cubeIndex][i]]];
 
         // Calculate the difference between the terrain values.
         let difference = vert2Sample - vert1Sample;
@@ -222,7 +243,11 @@ export default class Chunk {
           z + (vA[2] + (vB[2] - vA[2]) * difference),
         ];
       } else {
-        vertex[n] = [x + (vA[0] + vB[0]) / 2, y + (vA[1] + vB[1]) / 2, z + (vA[2] + vB[2]) / 2];
+        vertex[n] = [
+          x + (vA[0] + vB[0]) / 2,
+          y + (vA[1] + vB[1]) / 2,
+          z + (vA[2] + vB[2]) / 2,
+        ];
       }
 
       if (this.indexed) {
@@ -238,7 +263,11 @@ export default class Chunk {
     // Loop through all the vertices currently in the vertices list.
     for (let i = 0; i < this.vertices.length; i += 3) {
       // If we find a vert that matches ours, then simply return this index.
-      if (this.vertices[i] == vert[0] && this.vertices[i + 1] == vert[1] && this.vertices[i + 2] == vert[2]) {
+      if (
+        this.vertices[i] == vert[0] &&
+        this.vertices[i + 1] == vert[1] &&
+        this.vertices[i + 2] == vert[2]
+      ) {
         this.indices.push(i / 3);
         return;
       }

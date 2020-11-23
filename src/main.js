@@ -1,5 +1,6 @@
 import Graphics from "./Graphics.js";
 import * as twgl from "../node_modules/twgl.js/dist/4.x/twgl-full.module.js";
+import { vec3, vec4, mat4 } from "gl-matrix";
 import "normalize.css";
 import "./styles.scss";
 import Chunk from "./Chunk.js";
@@ -23,14 +24,13 @@ import vfPhong from "./shaders/phong.vert";
 import fsPhong from "./shaders/phong.frag";
 
 const m4 = twgl.m4;
-const v3 = twgl.v3;
 
 const defaultShader = twgl.createProgramInfo(gl, [vfDefault, fsDefault]);
 const phongShader = twgl.createProgramInfo(gl, [vfPhong, fsPhong]);
 
 const currentShader = phongShader;
 
-const bufferInfo = twgl.createBufferInfoFromArrays(gl, {
+let bufferInfo = twgl.createBufferInfoFromArrays(gl, {
   position: { numComponents: 3, data: chunk.vertices },
   indices: { numComponents: 3, data: chunk.indices },
   normal: { numComponents: 3, data: chunk.normals },
@@ -39,7 +39,7 @@ const bufferInfo = twgl.createBufferInfoFromArrays(gl, {
 console.log(bufferInfo);
 
 const uniforms = {
-  u_lightDir: v3.normalize([1, 2, 3]),
+  u_lightDir: vec3.fromValues(1, 2, 3),
   u_lightPos: [-chunk.width / 2, (chunk.height * 3) / 4, -chunk.width / 2],
   u_ambient: [0.0, 0.0, 0.0, 1],
   u_diffuse: [0.8, 0.0, 0.0, 1],
@@ -47,20 +47,26 @@ const uniforms = {
   u_shininess: 10,
 };
 
+vec3.normalize(uniforms.u_lightDir, uniforms.u_lightDir);
+
 const fov = degToRad(45);
 const zNear = 0.01;
 const zFar = 10000;
 const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
 
-const projection = m4.identity();
-const modelView = m4.identity();
-const modelViewProjection = m4.identity();
-const modelInverseTranspose = m4.identity();
+const projection = mat4.create();
+
+const model = mat4.create();
+const view = mat4.create();
+
+const modelView = mat4.create();
+const modelViewProjection = mat4.create();
+const modelInverseTranspose = mat4.create();
 
 let player = {
-  x: chunk.width / 2,
+  x: chunk.width,
   y: (-chunk.width * 3) / 4,
-  z: chunk.width / 2,
+  z: chunk.width,
   speed: chunk.width,
 };
 
@@ -77,16 +83,32 @@ function loop(now) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   input.update(player, deltaTime);
+  mat4.perspective(projection, fov, aspect, zNear, zFar);
 
-  m4.perspective(fov, aspect, zNear, zFar, projection);
-  m4.identity(modelView);
-  m4.rotateX(modelView, degToRad(input.pitch), modelView);
-  m4.rotateY(modelView, degToRad(input.yaw), modelView);
-  m4.translate(modelView, [player.x, player.y, player.z], modelView);
-  m4.multiply(projection, modelView, modelViewProjection);
+  mat4.identity(model);
+  mat4.rotateY(model, model, degToRad(now * 10));
+  mat4.translate(model, model, [-chunk.width / 2, 0, -chunk.width / 2]);
+  mat4.translate(model, model, [0, Math.sin(degToRad(now * 100)), 0]);
 
-  m4.copy(modelViewProjection, modelInverseTranspose);
+  mat4.identity(view);
+  mat4.rotateX(view, view, degToRad(input.pitch));
+  mat4.rotateY(view, view, degToRad(input.yaw));
+  mat4.translate(view, view, [player.x, player.y, player.z]);
+
+  mat4.multiply(modelView, view, model);
+  mat4.multiply(modelViewProjection, projection, modelView);
+
+  mat4.copy(modelInverseTranspose, modelViewProjection);
   //  m4.transpose(m4.inverse(model), modelInverseTranspose);
+
+  if (input.vector) {
+    let view = modelView;
+    let proj = projection;
+    let viewport = [0, 0, gl.canvas.width, gl.canvas.height];
+    let vec = unproject(input.vector, view, proj, viewport);
+    console.log(vec);
+    input.vector = null;
+  }
 
   uniforms.u_modelInverseTranspose = modelInverseTranspose;
   uniforms.u_modelViewProjection = modelViewProjection;
@@ -106,4 +128,44 @@ requestAnimationFrame(loop);
 
 function degToRad(d) {
   return (d * Math.PI) / 180;
+}
+
+function rebuild() {
+  chunk.createMesh();
+  bufferInfo = twgl.createBufferInfoFromArrays(gl, {
+    position: { numComponents: 3, data: chunk.vertices },
+    indices: { numComponents: 3, data: chunk.indices },
+    normal: { numComponents: 3, data: chunk.normals },
+  });
+}
+
+function unproject(vec, view, proj, viewport) {
+  var dest = vec3.create(); //output
+  var m = mat4.create(); //view * proj
+  var im = mat4.create(); //inverse view proj
+  var v = vec4.create(); //vector
+  var tv = vec4.create(); //transformed vector
+
+  //apply viewport transform
+  v[0] = ((vec[0] - viewport[0]) * 2.0) / viewport[2] - 1.0;
+  v[1] = ((vec[1] - viewport[1]) * 2.0) / viewport[3] - 1.0;
+  v[2] = vec[2];
+  v[3] = 1.0;
+
+  //build and invert viewproj matrix
+  mat4.multiply(m, view, proj);
+  if (!mat4.invert(im, modelViewProjection)) {
+    return null;
+  }
+
+  vec4.transformMat4(tv, v, im);
+  if (v[3] === 0.0) {
+    return null;
+  }
+
+  dest[0] = tv[0] / tv[3];
+  dest[1] = tv[1] / tv[3];
+  dest[2] = tv[2] / tv[3];
+
+  return dest;
 }
